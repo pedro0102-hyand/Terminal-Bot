@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
 
+# Carrega as variáveis de ambiente do arquivo .env
 load_dotenv()
 
 api_key = os.getenv("GROQ_API_KEY")

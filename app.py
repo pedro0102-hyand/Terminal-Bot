@@ -19,7 +19,7 @@ st.set_page_config(page_title="Chatbot Terminal", page_icon="🤖", layout="cent
 # sidebar
 with st.sidebar:
     st.header("Configurações")
-    temperatura = st.slider("Temperatura do modelo", min_value=0.0, max_value=1.5, value=0.7, step=0.1)
+    temperatura = st.slider("Temperatura do modelo", min_value=0.0, max_value=1.0, value=0.7, step=0.1, help="A temperatura controla a aleatoriedade das respostas do modelo. Valores mais baixos resultam em respostas mais determinísticas, enquanto valores mais altos produzem respostas mais variadas.")
     st.divider()
     if st.button("Limpar Conversa", use_container_width=True):
         st.session_state.mensagens = [

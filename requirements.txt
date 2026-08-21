@@ -1,6 +1,3 @@
-langchain
-langchain-community
-groq
+langchain-core
+langchain-groq
 python-dotenv
-pip 
-openai

@@ -1,35 +1,48 @@
 import os
-from langchain_community.chat_models import ChatOpenAI
-from langchain.schema import HumanMessage, SystemMessage
+import sys
 from dotenv import load_dotenv
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_groq import ChatGroq
 
-# Carrega variáveis de ambiente do .env
 load_dotenv()
 
-# Inicializa o modelo da Groq usando a API OpenAI-compatible
-chat = ChatOpenAI(
+api_key = os.getenv("GROQ_API_KEY")
+if not api_key:
+    print("❌ Erro: GROQ_API_KEY não encontrada no arquivo .env ou nas variáveis de ambiente.")
+    sys.exit(1)
+
+chat = ChatGroq(
+    model="openai/gpt-oss-20b",
     temperature=0.7,
-    model="llama3-8b-8192",  # ou outro modelo disponível na Groq
-    api_key=os.getenv("GROQ_API_KEY"),
-    base_url="https://api.groq.com/openai/v1"
+    api_key=api_key
 )
 
-# Mensagens de contexto
 mensagens = [
-    SystemMessage(content="Você é um assistente útil e direto.")
+    SystemMessage(content="Você é um assistente útil, inteligente e direto.")
 ]
 
-# Loop do terminal
 print("🤖 Chatbot iniciado! (digite 'sair' para encerrar)\n")
 
 while True:
-    entrada = input("Você: ")
+    try:
+        entrada = input("Você: ").strip()
+    except (KeyboardInterrupt, EOFError):
+        print("\n👋 Até mais!")
+        break
+
+    if not entrada:
+        continue
+
     if entrada.lower() in ["sair", "exit", "quit"]:
         print("👋 Até mais!")
         break
 
     mensagens.append(HumanMessage(content=entrada))
-    resposta = chat.invoke(mensagens)
-    mensagens.append(resposta)
-    print(f"Bot: {resposta.content}\n")
-
+    
+    try:
+        resposta = chat.invoke(mensagens)
+        mensagens.append(resposta)
+        print(f"\nBot: {resposta.content}\n")
+    except Exception as e:
+        print(f"\n❌ Ocorreu um erro ao processar a resposta: {e}\n")
+        mensagens.pop()

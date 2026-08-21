@@ -16,11 +16,23 @@ if not api_key:
 # configuracao da pagina web
 st.set_page_config(page_title="Chatbot Terminal", page_icon="🤖", layout="centered")
 
+# sidebar
+with st.sidebar:
+    st.header("Configurações")
+    temperatura = st.slider("Temperatura do modelo", min_value=0.0, max_value=1.5, value=0.7, step=0.1)
+    st.divider()
+    if st.button("Limpar Conversa", use_container_width=True):
+        st.session_state.mensagens = [
+            SystemMessage(content="Você é um assistente útil, inteligente e direto.")
+        ]
+        st.rerun()
+
+
 # modelo de llm
 chat = ChatGroq(
 
     model="openai/gpt-oss-20b",
-    temperature=0.7,
+    temperature=temperatura,
     api_key=api_key
 
 )

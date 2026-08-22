@@ -27,7 +27,16 @@ with st.sidebar:
     # anexar arquivo
     st.header("Anexar Arquivo")
     arquivo = st.file_uploader("Escolha um arquivo para anexar (opcional)", type=["txt", "pdf"])
-    st.divider()
+
+    # exibe informações do arquivo anexado
+    if arquivo is not None:
+
+        st.success("Arquivo anexado com sucesso!")
+        tamanho_mb = arquivo.size / (1024 * 1024)
+        st.write(f"**Nome:** {arquivo.name}")
+        st.write(f"**Tipo:** {arquivo.type}")
+        st.write(f"**Tamanho:** {tamanho_mb:.2f} MB")
+        st.divider()
 
     # limpar conversa
     if st.button("Limpar Conversa", use_container_width=True):

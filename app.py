@@ -3,6 +3,7 @@ import streamlit as st
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
+import fitz 
 
 load_dotenv()
 
@@ -36,6 +37,37 @@ with st.sidebar:
         st.write(f"**Nome:** {arquivo.name}")
         st.write(f"**Tipo:** {arquivo.type}")
         st.write(f"**Tamanho:** {tamanho_mb:.2f} MB")
+
+        # tratamento para arquivos PDF
+        if arquivo.type == "application/pdf":
+
+            # abrindo o arquivo PDF usando PyMuPDF
+            st.write("📄 PDF detectado.")
+            dados = arquivo.read()
+            documento = fitz.open(stream = dados , filetype = "pdf")
+
+            # extrair texto do pdf
+            texto = ""
+            for pagina in documento:
+                texto += pagina.get_text()
+            documento.close()
+
+            if not texto.strip():
+                st.warning("⚠️ O PDF não contém texto extraível. Ele pode ser uma imagem ou protegido contra cópia.")
+
+            # exibir o conteúdo do PDF em uma área de texto
+            st.text_area("Conteúdo do PDF:", value = texto, height = 400)
+
+        # tratamento para arquivos TXT
+        if arquivo.type == "text/plain":
+
+            texto = arquivo.read().decode("utf-8")
+
+            if not texto.strip():
+                st.warning("⚠️ O arquivo TXT está vazio.")
+                
+            st.text_area("Conteúdo do TXT:", value = texto, height = 400)
+
         st.divider()
 
     # limpar conversa

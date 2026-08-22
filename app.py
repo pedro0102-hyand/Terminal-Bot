@@ -29,6 +29,8 @@ with st.sidebar:
     st.header("Anexar Arquivo")
     arquivo = st.file_uploader("Escolha um arquivo para anexar (opcional)", type=["txt", "pdf"])
 
+    texto_arquivo = ""
+
     # exibe informações do arquivo anexado
     if arquivo is not None:
 
@@ -51,6 +53,7 @@ with st.sidebar:
             for pagina in documento:
                 texto += pagina.get_text()
             documento.close()
+            texto_arquivo = texto
 
             if not texto.strip():
                 st.warning("⚠️ O PDF não contém texto extraível. Ele pode ser uma imagem ou protegido contra cópia.")
@@ -62,10 +65,11 @@ with st.sidebar:
         if arquivo.type == "text/plain":
 
             texto = arquivo.read().decode("utf-8")
+            texto_arquivo = texto
 
             if not texto.strip():
                 st.warning("⚠️ O arquivo TXT está vazio.")
-                
+
             st.text_area("Conteúdo do TXT:", value = texto, height = 400)
 
         st.divider()
@@ -114,7 +118,6 @@ for mensagem in st.session_state.mensagens :
 entrada = st.chat_input("Digite sua mensagem aqui...")
 
 if entrada:
-
     # mensagem do usuário
     mensagem_usuario = HumanMessage(content=entrada)
     st.session_state.mensagens.append(mensagem_usuario)
@@ -124,14 +127,27 @@ if entrada:
 
     # resposta do bot
     try:
+
         with st.chat_message("assistant"):
             with st.spinner("O bot está pensando..."):
-                resposta = chat.invoke(st.session_state.mensagens)
+
+                # Cria uma cópia das mensagens para enviar à LLM, incluindo o contexto do arquivo se houver
+                mensagens_para_llm = st.session_state.mensagens.copy()
+
+                if texto_arquivo.strip(): # strip remove espaços em branco no início e no final do texto
+
+                    # Adiciona o conteúdo do arquivo como contexto para a LLM
+                    contexto_arquivo = SystemMessage(
+                        content=f"Você está respondendo a perguntas sobre um arquivo fornecido pelo usuário.\n\nUtilize o conteúdo do arquivo abaixo como contexto para responder.\n\nCONTEÚDO DO ARQUIVO:\n{texto_arquivo}\n\nResponda utilizando as informações presentes no arquivo.\nSe a informação solicitada não estiver presente no arquivo,\ninforme claramente que ela não foi encontrada no documento."
+                    )
+
+                    mensagens_para_llm.insert(1, contexto_arquivo) # Insere o contexto do arquivo logo após a mensagem do sistema inicial
+
+                resposta = chat.invoke(mensagens_para_llm)
                 st.session_state.mensagens.append(resposta)
                 st.markdown(f"**Bot:** {resposta.content}")
 
     except Exception as e:
         st.error(f"❌ Ocorreu um erro ao processar a resposta: {e}")
         st.session_state.mensagens.pop()
-
 

@@ -58,9 +58,6 @@ with st.sidebar:
             if not texto.strip():
                 st.warning("⚠️ O PDF não contém texto extraível. Ele pode ser uma imagem ou protegido contra cópia.")
 
-            # exibir o conteúdo do PDF em uma área de texto
-            st.text_area("Conteúdo do PDF:", value = texto, height = 400)
-
         # tratamento para arquivos TXT
         if arquivo.type == "text/plain":
 
@@ -69,8 +66,6 @@ with st.sidebar:
 
             if not texto.strip():
                 st.warning("⚠️ O arquivo TXT está vazio.")
-
-            st.text_area("Conteúdo do TXT:", value = texto, height = 400)
 
         st.divider()
 
@@ -81,21 +76,12 @@ with st.sidebar:
         ]
         st.rerun()
 
-
 # modelo de llm
-chat = ChatGroq(
-
-    model="openai/gpt-oss-20b",
-    temperature=temperatura,
-    api_key=api_key
-
-)
+chat = ChatGroq(model="openai/gpt-oss-20b", temperature=temperatura, api_key=api_key)
 
 # memoria da conversa
 if "mensagens" not in st.session_state:
-    st.session_state.mensagens = [
-        SystemMessage(content="Você é um assistente útil, inteligente e direto.")
-    ]
+    st.session_state.mensagens = [ SystemMessage(content="Você é um assistente útil, inteligente e direto.") ]
 
 # interface do chatbot
 st.title("🤖 Chatbot Terminal")
@@ -127,7 +113,6 @@ if entrada:
 
     # resposta do bot
     try:
-
         with st.chat_message("assistant"):
             with st.spinner("O bot está pensando..."):
 
@@ -137,10 +122,7 @@ if entrada:
                 if texto_arquivo.strip(): # strip remove espaços em branco no início e no final do texto
 
                     # Adiciona o conteúdo do arquivo como contexto para a LLM
-                    contexto_arquivo = SystemMessage(
-                        content=f"Você está respondendo a perguntas sobre um arquivo fornecido pelo usuário.\n\nUtilize o conteúdo do arquivo abaixo como contexto para responder.\n\nCONTEÚDO DO ARQUIVO:\n{texto_arquivo}\n\nResponda utilizando as informações presentes no arquivo.\nSe a informação solicitada não estiver presente no arquivo,\ninforme claramente que ela não foi encontrada no documento."
-                    )
-
+                    contexto_arquivo = SystemMessage(content=f"Você está respondendo a perguntas sobre um arquivo fornecido pelo usuário.\n\nUtilize o conteúdo do arquivo abaixo como contexto para responder.\n\nCONTEÚDO DO ARQUIVO:\n{texto_arquivo}\n\nResponda utilizando as informações presentes no arquivo.\nSe a informação solicitada não estiver presente no arquivo,\ninforme claramente que ela não foi encontrada no documento.")
                     mensagens_para_llm.insert(1, contexto_arquivo) # Insere o contexto do arquivo logo após a mensagem do sistema inicial
 
                 resposta = chat.invoke(mensagens_para_llm)

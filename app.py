@@ -18,9 +18,18 @@ st.set_page_config(page_title="Chatbot Terminal", page_icon="🤖", layout="cent
 
 # sidebar
 with st.sidebar:
+
+    # configuracoes do chatbot
     st.header("Configurações")
     temperatura = st.slider("Temperatura do modelo", min_value=0.0, max_value=1.0, value=0.7, step=0.1, help="A temperatura controla a aleatoriedade das respostas do modelo. Valores mais baixos resultam em respostas mais determinísticas, enquanto valores mais altos produzem respostas mais variadas.")
     st.divider()
+
+    # anexar arquivo
+    st.header("Anexar Arquivo")
+    arquivo = st.file_uploader("Escolha um arquivo para anexar (opcional)", type=["txt", "pdf"])
+    st.divider()
+
+    # limpar conversa
     if st.button("Limpar Conversa", use_container_width=True):
         st.session_state.mensagens = [
             SystemMessage(content="Você é um assistente útil, inteligente e direto.")

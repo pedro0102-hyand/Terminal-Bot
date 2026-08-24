@@ -134,17 +134,19 @@ if entrada:
                 if imagem_base64:
                     resposta_vision = vision_client.chat.completions.create(
 
-                        model="qwen/qwen3.6-27b",
-                        temperature=temperatura,
+                        model = "qwen/qwen3.6-27b",
+                        temperature = 0.3,
                         messages=[
                             {
                                 "role": "system",
                                 "content": (
-                                    "Você é um assistente inteligente "
-                                    "especializado em análise de imagens. "
-                                    "Analise a imagem fornecida e responda "
-                                    "à pergunta do usuário de forma clara "
-                                    "e objetiva."
+                                    "Você é um motor de OCR de alta precisão. Sua tarefa é transcrever e extrair "
+                                    "com máxima fidelidade todo o conteúdo textual e estruturado presente na imagem.\n"
+                                    "- Preserve a hierarquia original (títulos, subtítulos e listas).\n"
+                                    "- Converta tabelas presentes na imagem diretamente para formato de tabela em Markdown.\n"
+                                    "- Se houver recibos, notas ou formulários, capture pares de chave/valor com exatidão.\n"
+                                    "- Não invente dados ilegíveis; se um trecho estiver ilegível, indique com [ilegível].\n"
+                                    "- Responda à instrução do usuário priorizando a exatidão dos dados transcritos."
                                 )
                             },
                             {

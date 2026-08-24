@@ -3,4 +3,5 @@ langchain-core
 langchain-groq
 python-dotenv
 pymupdf
-fitz
+groq
+base64

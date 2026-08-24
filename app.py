@@ -33,7 +33,6 @@ with st.sidebar:
 
     # anexar arquivo
     st.header("Anexar Arquivo")
-
     arquivo = st.file_uploader("Escolha um arquivo para anexar (opcional)", type=["txt", "pdf", "png", "jpg", "jpeg"])
     texto_arquivo = ""
 
@@ -74,7 +73,7 @@ with st.sidebar:
                 st.warning("⚠️ O arquivo TXT está vazio.")
 
         elif arquivo.type in ["image/png", "image/jpeg"]:
-
+            
             st.write("🖼️ Imagem detectada.")
             st.image(arquivo, caption=arquivo.name)
 
@@ -87,7 +86,6 @@ with st.sidebar:
 
     # limpar conversa
     if st.button("Limpar Conversa", use_container_width=True):
-
         st.session_state.mensagens = [SystemMessage(content="Você é um assistente útil, inteligente e direto.")]
         st.rerun()
 
@@ -99,7 +97,6 @@ vision_client = Groq(api_key=api_key)
 
 # memoria de mensagens do chatbot
 if "mensagens" not in st.session_state:
-
     st.session_state.mensagens = [SystemMessage(content="Você é um assistente útil, inteligente e direto.")]
 
 # interface do chatbot
@@ -109,16 +106,15 @@ st.caption("Digite sua mensagem abaixo e pressione Enter para enviar.")
 # histórico de mensagens
 for mensagem in st.session_state.mensagens:
 
+    # mensagens do usuário
     if isinstance(mensagem, HumanMessage):
-
         with st.chat_message("user"):
             st.markdown(f"**Você:** {mensagem.content}")
 
+    # mensagens do sistema (bot)
     elif mensagem.type == "ai":
-
         with st.chat_message("assistant"):
-            st.markdown(f"**Bot:** {mensagem.content}")
-
+                st.markdown(f"**Bot:** {mensagem.content}")
 
 # entrada do usuário
 entrada = st.chat_input("Digite sua mensagem aqui...")
@@ -131,9 +127,7 @@ if entrada:
     with st.chat_message("user"): st.markdown(f"**Você:** {entrada}")
 
     try:
-
         with st.chat_message("assistant"):
-
             with st.spinner("O bot está pensando..."):
 
                 # imagem → Qwen-3.6-27B
@@ -174,13 +168,7 @@ if entrada:
                         ]
                     )
 
-                    resposta_texto = (
-                        resposta_vision
-                        .choices[0]
-                        .message
-                        .content
-                    )
-
+                    resposta_texto = (resposta_vision.choices[0].message.content)
                     st.markdown(f"**Bot:** {resposta_texto}")
 
                     # salva a resposta no histórico
@@ -197,12 +185,12 @@ if entrada:
                         contexto_arquivo = SystemMessage(content=f"""Você está respondendo a perguntas sobre um arquivo fornecido pelo usuário. Utilize o conteúdo do arquivo abaixo como contexto para responder. CONTEÚDO DO ARQUIVO: {texto_arquivo} Responda utilizando as informações presentes no arquivo. Se a informação solicitada não estiver presente no arquivo, informe claramente que ela não foi encontrada no documento. """)
                         mensagens_para_llm.insert(1,contexto_arquivo)
 
+                    # envia as mensagens para o modelo de linguagem e obtém a resposta
                     resposta = chat.invoke(mensagens_para_llm)
                     st.session_state.mensagens.append(resposta)
                     st.markdown(f"**Bot:** {resposta.content}")
 
     except Exception as e:
-
         st.error( f"❌ Ocorreu um erro ao processar " f"a resposta: {e}")
         st.session_state.mensagens.pop()
 

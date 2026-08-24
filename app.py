@@ -2,13 +2,13 @@ import os
 import base64
 import streamlit as st
 from dotenv import load_dotenv
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_groq import ChatGroq
 from groq import Groq
 import fitz
 
+# Carrega as variáveis de ambiente do arquivo .env
 load_dotenv()
-
 api_key = os.getenv("GROQ_API_KEY")
 
 # Carrega as variáveis de ambiente do arquivo .env
@@ -112,7 +112,7 @@ for mensagem in st.session_state.mensagens:
             st.markdown(f"**Você:** {mensagem.content}")
 
     # mensagens do sistema (bot)
-    elif mensagem.type == "ai":
+    elif isinstance(mensagem, AIMessage):
         with st.chat_message("assistant"):
                 st.markdown(f"**Bot:** {mensagem.content}")
 
@@ -172,7 +172,7 @@ if entrada:
                     st.markdown(f"**Bot:** {resposta_texto}")
 
                     # salva a resposta no histórico
-                    st.session_state.mensagens.append(SystemMessage(content=resposta_texto))
+                    st.session_state.mensagens.append(AIMessage(content=resposta_texto))
 
                 else:
 
@@ -187,7 +187,7 @@ if entrada:
 
                     # envia as mensagens para o modelo de linguagem e obtém a resposta
                     resposta = chat.invoke(mensagens_para_llm)
-                    st.session_state.mensagens.append(resposta)
+                    st.session_state.mensagens.append(AIMessage(content=resposta.content))
                     st.markdown(f"**Bot:** {resposta.content}")
 
     except Exception as e:

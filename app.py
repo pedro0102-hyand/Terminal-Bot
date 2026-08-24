@@ -23,6 +23,9 @@ st.set_page_config(page_title="Chatbot Terminal", page_icon="🤖", layout="cent
 imagem_base64 = None
 imagem_tipo = None
 
+# modelo de visão para análise de imagens
+vision_client = Groq(api_key = api_key)
+
 # sidebar
 with st.sidebar:
 
@@ -47,20 +50,60 @@ with st.sidebar:
 
         if arquivo.type == "application/pdf":
 
-            # abrir o PDF usando PyMuPDF (fitz)
+            # ler o arquivo PDF
             st.write("📄 PDF detectado.")
             dados = arquivo.read()
             documento = fitz.open(stream=dados, filetype="pdf")
-            texto = ""
+            texto = "".join(pagina.get_text() for pagina in documento)
 
-            # extrai o texto de cada página do PDF
-            for pagina in documento:
-                texto += pagina.get_text()
+            # verifica se o PDF contém texto pesquisável
+            if texto.strip():
+                texto_arquivo = texto
+                st.success("✅ Texto extraído com sucesso!")
+
+            else:
+
+                # PDF escaneado detectado: executa OCR página por página via Qwen
+                st.info("🔍 PDF digitalizado detectado. Executando OCR com Qwen...")
+                with st.spinner("Extraindo texto das páginas digitalizadas..."):
+
+                    textos_ocr = [] # lista para armazenar o texto extraído de cada página
+
+                    for num_pag, pagina in enumerate(documento):
+                        # Renderiza a página do PDF em imagem (150 DPI para bom equilíbrio de clareza/tamanho)
+                        pix = pagina.get_pixmap(dpi=150)
+                        img_bytes = pix.tobytes("png")
+
+                        # Converte a imagem para base64 para enviar ao modelo de visão
+                        img_b64 = base64.b64encode(img_bytes).decode("utf-8")
+
+                        # Chama o Qwen para transcrever a página
+                        resp_ocr = vision_client.chat.completions.create(
+                            model="qwen/qwen3.6-27b",
+                            temperature=0.3,
+                            messages=[
+                                {
+                                    "role": "system",
+                                    "content": "Você é um motor de OCR de alta precisão. Transcreva fielmente todo o conteúdo legível (tabelas em Markdown, títulos e textos). Não adicione saudações nem comentários."
+                                },
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {"type": "text", "text": "Transcreva todo o conteúdo desta página de documento:"},
+                                        {
+                                            "type": "image_url",
+                                            "image_url": {"url": f"data:image/png;base64,{img_b64}"}
+                                        }
+                                    ]
+                                }
+                            ]
+                        )
+                        textos_ocr.append(f"--- Página {num_pag + 1} ---\n{resp_ocr.choices[0].message.content}")
+
+                    texto_arquivo = "\n\n".join(textos_ocr)
+                    st.success("✅ OCR das páginas concluído com sucesso!")
 
             documento.close()
-            texto_arquivo = texto
-            if not texto.strip():
-                st.warning("⚠️ O PDF não contém texto extraível. " "Ele pode ser uma imagem ou protegido contra cópia.")
 
         elif arquivo.type == "text/plain":
 
@@ -68,7 +111,7 @@ with st.sidebar:
             st.write("📄 Arquivo TXT detectado.")
             texto = arquivo.read().decode("utf-8")
             texto_arquivo = texto
-            
+
             if not texto.strip():
                 st.warning("⚠️ O arquivo TXT está vazio.")
 
@@ -91,9 +134,6 @@ with st.sidebar:
 
 # modelo de linguagem para conversas de texto
 chat = ChatGroq(model = "openai/gpt-oss-20b", temperature = temperatura, api_key = api_key)
-
-# modelo de visão para análise de imagens
-vision_client = Groq(api_key = api_key)
 
 # memoria de mensagens do chatbot
 if "mensagens" not in st.session_state:

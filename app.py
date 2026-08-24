@@ -36,9 +36,9 @@ with st.sidebar:
     arquivo = st.file_uploader("Escolha um arquivo para anexar (opcional)", type=["txt", "pdf", "png", "jpg", "jpeg"])
     texto_arquivo = ""
 
-    # exibe informações do arquivo anexado
     if arquivo is not None:
 
+        # exibe informações do arquivo
         st.success("Arquivo anexado com sucesso!")
         tamanho_mb = arquivo.size / (1024 * 1024)
         st.write(f"**Nome:** {arquivo.name}")
@@ -68,7 +68,7 @@ with st.sidebar:
             st.write("📄 Arquivo TXT detectado.")
             texto = arquivo.read().decode("utf-8")
             texto_arquivo = texto
-
+            
             if not texto.strip():
                 st.warning("⚠️ O arquivo TXT está vazio.")
 
@@ -90,10 +90,10 @@ with st.sidebar:
         st.rerun()
 
 # modelo de linguagem para conversas de texto
-chat = ChatGroq(model="openai/gpt-oss-20b", temperature=temperatura, api_key=api_key)
+chat = ChatGroq(model = "openai/gpt-oss-20b", temperature = temperatura, api_key = api_key)
 
 # modelo de visão para análise de imagens
-vision_client = Groq(api_key=api_key)
+vision_client = Groq(api_key = api_key)
 
 # memoria de mensagens do chatbot
 if "mensagens" not in st.session_state:

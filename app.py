@@ -4,6 +4,7 @@ import streamlit as st
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_groq import ChatGroq
+from langchain_community.tools import DuckDuckGoSearchResults
 from groq import Groq
 import fitz
 
@@ -32,6 +33,7 @@ with st.sidebar:
     # configurações do chatbot
     st.header("Configurações")
     temperatura = st.slider("Temperatura do modelo", min_value=0.0, max_value=1.0, value=0.7, step=0.1, help="A temperatura controla a aleatoriedade das respostas do modelo.")
+    pesquisa_web = st.checkbox("Ativar pesquisa na web 🌐", value=False, help="Permite que o chatbot pesquise informações na web para fornecer respostas mais precisas.")
     st.divider()
 
     # anexar arquivo
@@ -154,7 +156,7 @@ for mensagem in st.session_state.mensagens:
     # mensagens do sistema (bot)
     elif isinstance(mensagem, AIMessage):
         with st.chat_message("assistant"):
-                st.markdown(f"**Bot:** {mensagem.content}")
+            st.markdown(f"**Bot:** {mensagem.content}")
 
 # entrada do usuário
 entrada = st.chat_input("Digite sua mensagem aqui...")
@@ -164,7 +166,8 @@ if entrada:
     # adiciona a mensagem do usuário ao histórico
     mensagem_usuario = HumanMessage(content=entrada)
     st.session_state.mensagens.append(mensagem_usuario)
-    with st.chat_message("user"): st.markdown(f"**Você:** {entrada}")
+    with st.chat_message("user"):
+        st.markdown(f"**Você:** {entrada}")
 
     try:
         with st.chat_message("assistant"):
@@ -173,9 +176,8 @@ if entrada:
                 # imagem → Qwen-3.6-27B
                 if imagem_base64:
                     resposta_vision = vision_client.chat.completions.create(
-
-                        model = "qwen/qwen3.6-27b",
-                        temperature = 0.3,
+                        model="qwen/qwen3.6-27b",
+                        temperature=0.3,
                         messages=[
                             {
                                 "role": "system",
@@ -210,22 +212,48 @@ if entrada:
                         ]
                     )
 
-                    resposta_texto = (resposta_vision.choices[0].message.content)
+                    resposta_texto = resposta_vision.choices[0].message.content
                     st.markdown(f"**Bot:** {resposta_texto}")
 
                     # salva a resposta no histórico
                     st.session_state.mensagens.append(AIMessage(content=resposta_texto))
 
                 else:
-
                     # copia das mensagens para enviar ao modelo de linguagem
-                    mensagens_para_llm = (st.session_state.mensagens.copy())
+                    mensagens_para_llm = st.session_state.mensagens.copy()
+
+                    # Se a busca na web estiver ativada, pesquisa no DuckDuckGo
+                    if pesquisa_web:
+                        with st.status("🔍 Buscando na web...", expanded=False):
+                            busca = DuckDuckGoSearchResults(max_results=4, output_format="list")
+                            resultados = busca.invoke(entrada)
+
+                            # Formata os trechos e links encontrados
+                            texto_busca = "\n\n".join(f"Trecho: {item['snippet']}\nLink: {item['link']}" for item in resultados)
+                            contexto_web = SystemMessage(
+                                content=(
+                                    "Você tem acesso a resultados de busca em tempo real na internet.\n"
+                                    f"RESULTADOS DA BUSCA:\n{texto_busca}\n\n"
+                                    "Instruções:\n"
+                                    "1. Use as informações acima para responder com detalhes.\n"
+                                    "2. Ao final da resposta, inclua uma seção com os links e fontes encontrados em formato Markdown clicável."
+                                )
+                            )
+                            mensagens_para_llm.insert(1, contexto_web)
 
                     if texto_arquivo.strip():
-
                         # prompt para fornecer contexto do arquivo ao modelo de linguagem
-                        contexto_arquivo = SystemMessage(content=f"""Você está respondendo a perguntas sobre um arquivo fornecido pelo usuário. Utilize o conteúdo do arquivo abaixo como contexto para responder. CONTEÚDO DO ARQUIVO: {texto_arquivo} Responda utilizando as informações presentes no arquivo. Se a informação solicitada não estiver presente no arquivo, informe claramente que ela não foi encontrada no documento. """)
-                        mensagens_para_llm.insert(1,contexto_arquivo)
+                        contexto_arquivo = SystemMessage(
+                            content=(
+                                "Você está respondendo a perguntas sobre um arquivo fornecido pelo usuário. "
+                                f"Utilize o conteúdo do arquivo abaixo como contexto para responder. "
+                                f"CONTEÚDO DO ARQUIVO: {texto_arquivo} "
+                                "Responda utilizando as informações presentes no arquivo. "
+                                "Se a informação solicitada não estiver presente no arquivo, "
+                                "informe claramente que ela não foi encontrada no documento."
+                            )
+                        )
+                        mensagens_para_llm.insert(1, contexto_arquivo)
 
                     # envia as mensagens para o modelo de linguagem e obtém a resposta
                     resposta = chat.invoke(mensagens_para_llm)
@@ -233,6 +261,5 @@ if entrada:
                     st.markdown(f"**Bot:** {resposta.content}")
 
     except Exception as e:
-        st.error( f"❌ Ocorreu um erro ao processar " f"a resposta: {e}")
+        st.error(f"❌ Ocorreu um erro ao processar a resposta: {e}")
         st.session_state.mensagens.pop()
-

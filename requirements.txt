@@ -1,7 +1,8 @@
 streamlit
-langchain-core
-langchain-groq
 python-dotenv
+langchain-core
+langchain-community
+langchain-groq
+duckduckgo-search
 pymupdf
 groq
-base64

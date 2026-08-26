@@ -5,6 +5,9 @@ from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_groq import ChatGroq
 from langchain_community.tools import DuckDuckGoSearchResults
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import FAISS
+from langchain_huggingface import HuggingFaceEmbeddings
 from groq import Groq
 import fitz
 
@@ -26,6 +29,22 @@ imagem_tipo = None
 
 # modelo de visão para análise de imagens
 vision_client = Groq(api_key = api_key)
+
+@st.cache_resource
+
+# funcao para carregar o modelo de embeddings
+def carregar_embeddings():
+    return HuggingFaceEmbeddings(model_name = "all-MiniLM-L6-v2")
+
+embeddings = carregar_embeddings()
+
+# criando o banco vetorial local
+def criar_vector_store(texto : str):
+
+    splitter = RecursiveCharacterTextSplitter(chunk_size = 800, chunk_overlap = 100)
+    docs = splitter.create_documents([texto])
+    return FAISS.from_documents(docs, embeddings)
+
 
 # sidebar
 with st.sidebar:
@@ -127,11 +146,19 @@ with st.sidebar:
             imagem_base64 = base64.b64encode(imagem_bytes).decode("utf-8")
             imagem_tipo = arquivo.type
 
+        # indexacao com RAG
+        if texto_arquivo.strip():
+            with st.spinner("Indexando documento no banco vetorial (RAG)..."):
+                st.session_state.vector_db = criar_vector_store(texto_arquivo)
+                st.success("✅ Documento indexado com RAG!")
+
         st.divider()
 
     # limpar conversa
     if st.button("Limpar Conversa", use_container_width=True):
         st.session_state.mensagens = [SystemMessage(content="Você é um assistente útil, inteligente e direto.")]
+        if 'vector_db' in st.session_state:
+            del st.session_state.vector_db
         st.rerun()
 
 # modelo de linguagem para conversas de texto
@@ -241,24 +268,35 @@ if entrada:
                             )
                             mensagens_para_llm.insert(1, contexto_web)
 
-                    if texto_arquivo.strip():
-                        # prompt para fornecer contexto do arquivo ao modelo de linguagem
+                    # RAG: Busca semântica dos trechos mais relevantes no FAISS
+                    if "vector_db" in st.session_state and st.session_state.vector_db is not None:
+
+                        with st.status("📚 Recuperando trechos relevantes do documento...", expanded=False):
+
+                            trechos_relevantes = st.session_state.vector_db.similarity_search(entrada, k=3)
+                            contexto_rag = "\n\n---\n\n".join([doc.page_content for doc in trechos_relevantes])
+
                         contexto_arquivo = SystemMessage(
                             content=(
-                                "Você está respondendo a perguntas sobre um arquivo fornecido pelo usuário. "
-                                f"Utilize o conteúdo do arquivo abaixo como contexto para responder. "
-                                f"CONTEÚDO DO ARQUIVO: {texto_arquivo} "
-                                "Responda utilizando as informações presentes no arquivo. "
-                                "Se a informação solicitada não estiver presente no arquivo, "
-                                "informe claramente que ela não foi encontrada no documento."
+                                "Você está respondendo a perguntas com base nos trechos recuperados de um documento anexado.\n"
+                                f"TRECHOS RELEVANTES:\n\"\"\"\n{contexto_rag}\n\"\"\"\n\n"
+                                "Responda à pergunta utilizando estritamente as informações presentes nos trechos acima. "
+                                "Se a informação não estiver presente, informe claramente que ela não foi encontrada no documento."
                             )
                         )
+
                         mensagens_para_llm.insert(1, contexto_arquivo)
 
                     # envia as mensagens para o modelo de linguagem e obtém a resposta
                     resposta = chat.invoke(mensagens_para_llm)
                     st.session_state.mensagens.append(AIMessage(content=resposta.content))
                     st.markdown(f"**Bot:** {resposta.content}")
+
+                    # Mostra os trechos consultados do documento se o RAG foi usado
+                    if "vector_db" in st.session_state and st.session_state.vector_db is not None:
+                        with st.expander("📑 Ver trechos consultados no documento (RAG)"):
+                            for i, doc in enumerate(trechos_relevantes, 1):
+                                st.markdown(f"**Trecho {i}:**\n>{doc.page_content}")
 
     except Exception as e:
         st.error(f"❌ Ocorreu um erro ao processar a resposta: {e}")

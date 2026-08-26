@@ -6,3 +6,7 @@ langchain-groq
 duckduckgo-search
 pymupdf
 groq
+faiss-cpu
+langchain-text-splitters
+langchain-huggingface
+sentence-transformers

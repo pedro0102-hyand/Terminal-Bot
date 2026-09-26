@@ -10,3 +10,4 @@ faiss-cpu
 langchain-text-splitters
 langchain-huggingface
 sentence-transformers
+torchvision

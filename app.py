@@ -252,7 +252,7 @@ if entrada:
                     # Se a busca na web estiver ativada, pesquisa no DuckDuckGo
                     if pesquisa_web:
                         with st.status("🔍 Buscando na web...", expanded=False):
-                            busca = DuckDuckGoSearchResults(max_results=4, output_format="list")
+                            busca = DuckDuckGoSearchResults(max_results=5, output_format="list")
                             resultados = busca.invoke(entrada)
 
                             # Formata os trechos e links encontrados

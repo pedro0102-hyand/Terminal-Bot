@@ -1,199 +1,237 @@
-# 🤖 Terminal-Bot - Chatbot Inteligente
+# 🤖 Terminal-Bot
 
-Um chatbot inteligente desenvolvido em Python que oferece duas interfaces: uma versão web moderna com **Streamlit** e uma versão de linha de comando para uso em terminal.
+Chatbot multimodal em Python com interface web em Streamlit, usando Groq, LangChain, embeddings, RAG e visão computacional.
 
-## 📋 Descrição
+## Visão geral
 
-Terminal-Bot é um assistente conversacional alimentado pela **API Groq** e **LangChain**, capaz de fornecer respostas inteligentes e contextualizadas. O projeto oferece funcionalidades avançadas como:
+Este projeto funciona como um assistente conversacional que pode:
 
-- 💬 Conversas fluidas em tempo real
-- 🔍 Busca na web integrada (DuckDuckGo)
-- 📄 Processamento e análise de documentos PDF
-- 🧠 Embeddings semânticos com transformers
-- 📚 Armazenamento vetorial local com FAISS
-- 👁️ Análise de imagens com visão computacional
+- responder em texto usando um LLM da Groq;
+- pesquisar na web com DuckDuckGo;
+- processar arquivos `.txt` e `.pdf` via RAG;
+- analisar imagens com um modelo de visão;
+- extrair texto de PDFs digitalizados por OCR;
+- indexar documentos em um banco vetorial local com FAISS;
+- recuperar trechos semanticamente relevantes para responder melhor.
 
-## 🚀 Início Rápido
+A aplicação principal está em [app.py](app.py). O projeto ainda contém um arquivo de teste em [teste.py](teste.py).
 
-### Pré-requisitos
+## Arquitetura do projeto
 
-- Python 3.8+
-- Chave API da [Groq](https://console.groq.com)
+O sistema é composto por 3 motores principais:
 
-### Instalação
+1. LLM principal
+   - Modelo: `openai/gpt-oss-20b`
+   - Biblioteca: `langchain_groq`
+   - Função: geração final da resposta conversacional
 
-1. **Clone ou baixe o projeto**
-   ```bash
-   cd Terminal-Bot
-   ```
+2. Modelo de visão
+   - Modelo: `qwen/qwen3.6-27b`
+   - Biblioteca: `groq`
+   - Função: analisar imagens e fazer OCR em PDFs digitalizados
 
-2. **Crie um ambiente virtual**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # No Windows: venv\Scripts\activate
-   ```
+3. Embeddings + busca vetorial
+   - Modelo: `all-MiniLM-L6-v2`
+   - Biblioteca: `langchain_huggingface` + `FAISS`
+   - Função: transformar textos em vetores e recuperar contexto semântico por RAG
 
-3. **Instale as dependências**
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Fluxos implementados
 
-4. **Configure a variável de ambiente**
-   
-   Crie um arquivo `.env` na raiz do projeto:
-   ```env
-   GROQ_API_KEY=sua_chave_api_aqui
-   ```
+### 1) Fluxo de conversa normal
 
-## 🎮 Uso
+Quando o usuário envia uma mensagem normal, sem imagem e sem documento anexado:
 
-### Interface Web (Streamlit)
+- a mensagem entra no histórico da sessão;
+- o app monta `mensagens_para_llm`;
+- envia para o LLM principal;
+- retorna a resposta final.
 
-Execute a aplicação web:
+Esse é o fluxo mais simples do chatbot.
+
+### 2) Fluxo de busca na web
+
+Quando a opção de busca na web está ativada:
+
+- a entrada do usuário é enviada para DuckDuckGo;
+- o app recebe resultados com `snippet` e `link`;
+- esses resultados são convertidos em contexto em texto;
+- esse contexto é inserido na lista de mensagens antes do LLM;
+- o modelo responde com base nessas fontes externas.
+
+Esse é um fluxo de contexto em tempo real, diferente do RAG.
+
+### 3) Fluxo de RAG com documento local
+
+Quando um arquivo `.txt` ou um PDF textual é anexado:
+
+- o texto é extraído;
+- o conteúdo é fragmentado em chunks;
+- os chunks são convertidos em embeddings;
+- são armazenados em um banco vetorial FAISS;
+- quando o usuário pergunta algo, o sistema busca os trechos mais relevantes;
+- esses trechos são passados ao LLM como contexto;
+- o modelo responde usando somente o conteúdo relevante do documento.
+
+### 4) Fluxo de visão para imagem
+
+Quando uma imagem é anexada:
+
+- a imagem é convertida em base64;
+- a app envia a imagem e a pergunta para o modelo de visão;
+- o modelo analisa visualmente o conteúdo;
+- retorna um texto descrevendo ou transcrevendo a informação visual;
+- essa resposta pode ser exibida diretamente ao usuário.
+
+### 5) Fluxo de OCR para PDF digitalizado
+
+Quando um PDF não possui texto pesquisável:
+
+- o app abre cada página com `PyMuPDF`;
+- converte cada página para imagem;
+- transforma a imagem em base64;
+- chama o modelo de visão para fazer OCR da página;
+- junta o texto extraído de todas as páginas;
+- esse texto vira conteúdo textual do documento;
+- a partir daí, ele entra no mesmo fluxo de RAG.
+
+Esse é o caminho usado para documentos escaneados, como um CV digitalizado.
+
+## Stack tecnológica
+
+- Streamlit: interface web
+- Python-dotenv: carregamento das variáveis de ambiente
+- LangChain: orquestração do LLM e mensagens
+- Groq: acesso ao LLM e ao modelo de visão
+- DuckDuckGo Search: busca na web
+- PyMuPDF (`fitz`): leitura/extracao de PDF
+- FAISS: banco vetorial local
+- LangChain Text Splitter: chunking de documentos
+- Hugging Face Embeddings: modelagem semântica de textos
+- Sentence Transformers: suporte ao pipeline de embeddings
+
+## Estrutura do repositório
+
+```text
+Terminal-Bot/
+├── app.py
+├── requirements.txt
+├── teste.py
+├── README.md
+├── .env
+├── .gitignore
+├── __pycache__/
+└── venv/
+```
+
+## Requisitos
+
+- Python 3.10+
+- Chave API da Groq
+- Acesso à internet para baixar modelos e fazer busca web
+
+## Instalação
+
+1. Entre na pasta do projeto:
+
+```bash
+cd /caminho/para/Terminal-Bot
+```
+
+2. Crie um ambiente virtual:
+
+```bash
+python -m venv venv
+source venv/bin/activate
+```
+
+3. Instale as dependências:
+
+```bash
+pip install -r requirements.txt
+```
+
+4. Crie um arquivo `.env` com a chave da API:
+
+```env
+GROQ_API_KEY=sua_chave_aqui
+```
+
+## Execução
+
+### Iniciar a aplicação web
+
 ```bash
 streamlit run app.py
 ```
 
-A aplicação abrirá no navegador em `http://localhost:8501`
+Se a porta 8501 estiver ocupada, use outra porta:
 
-**Funcionalidades:**
-- Interface amigável com bate-papo em tempo real
-- Upload de arquivos PDF para análise
-- Upload de imagens para visão computacional
-- Busca integrada na web
-- Histórico de conversas
-
-### Interface de Terminal
-
-Execute o chatbot no terminal:
 ```bash
-python chatbot_terminal.py
+streamlit run app.py --server.port 8502
 ```
 
-**Uso:**
-```
-🤖 Chatbot iniciado! (digite 'sair' para encerrar)
+## Variáveis importantes
 
-Você: Olá, como você pode me ajudar?
-Bot: Olá! Sou um assistente útil e estou aqui para ajudá-lo...
+- `GROQ_API_KEY`: chave de acesso à API da Groq
+- `temperatura`: controla a criatividade da resposta do LLM
+- `pesquisa_web`: habilita busca na internet
+- `vector_db`: banco vetorial do documento anexado
 
-Você: sair
-👋 Até mais!
-```
+## Troubleshooting
 
-**Comandos:**
-- Digite sua mensagem e pressione Enter
-- Digite `sair`, `exit` ou `quit` para encerrar
-- Pressione Ctrl+C para interromper
+### Erro de chave da API
 
-## 📦 Dependências
+Mensagem comum:
 
-| Pacote | Versão | Descrição |
-|--------|--------|-----------|
-| `streamlit` | - | Framework para interface web |
-| `python-dotenv` | - | Gerenciamento de variáveis de ambiente |
-| `langchain-core` | - | Core do LangChain |
-| `langchain-community` | - | Integrações comunitárias do LangChain |
-| `langchain-groq` | - | Integração com API Groq |
-| `duckduckgo-search` | - | Busca na web |
-| `pymupdf` | - | Processamento de PDFs |
-| `groq` | - | Cliente oficial da API Groq |
-| `faiss-cpu` | - | Busca vetorial local |
-| `langchain-text-splitters` | - | Divisão de textos |
-| `langchain-huggingface` | - | Embeddings com HuggingFace |
-| `sentence-transformers` | - | Modelos de transformers para embeddings |
+- `GROQ_API_KEY não encontrada`
 
-## 🏗️ Estrutura do Projeto
+Solução:
 
-```
-Terminal-Bot/
-├── app.py                      # Interface web com Streamlit
-├── chatbot_terminal.py         # Interface de terminal
-├── requirements.txt            # Dependências do projeto
-├── teste.py                    # Testes e experimentos
-└── README.md                   # Este arquivo
+- verificar se o arquivo `.env` existe;
+- confirmar que a chave foi digitada corretamente;
+- reiniciar a aplicação.
+
+### Erro de importação de pacote
+
+Se aparecer algo como:
+
+- `Could not import ddgs python package`
+
+Solução:
+
+```bash
+pip install -U ddgs
 ```
 
-## 🔑 Configuração da API Groq
+### Problema de porta
 
-1. Acesse [console.groq.com](https://console.groq.com)
-2. Faça login ou crie uma conta
-3. Crie uma nova chave API
-4. Adicione a chave ao arquivo `.env`
+Se a porta 8501 estiver em uso:
 
-## 🎯 Modelos Disponíveis
-
-- **LLM Principal**: `openai/gpt-oss-20b` (Groq)
-- **Embeddings**: `all-MiniLM-L6-v2` (HuggingFace)
-- **Temperatura**: 0.7 (criatividade moderada)
-
-## 🐛 Troubleshooting
-
-### Erro: "GROQ_API_KEY não encontrada"
-- Verifique se o arquivo `.env` existe
-- Confirme que a chave API está corretamente definida
-- Reinicie a aplicação
-
-### Erro: "Modelos de embeddings não carregados"
-- Certifique-se de que a internet está conectada (primeira execução baixa os modelos)
-- Verifique o espaço em disco disponível
-
-### Aplicação Streamlit não abre
-- Verifique se a porta 8501 não está em uso
-- Tente: `streamlit run app.py --server.port 8502`
-
-## 📝 Exemplo de Uso Programático
-
-```python
-from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage, SystemMessage
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-api_key = os.getenv("GROQ_API_KEY")
-
-chat = ChatGroq(
-    model="openai/gpt-oss-20b",
-    temperature=0.7,
-    api_key=api_key
-)
-
-mensagens = [
-    SystemMessage(content="Você é um assistente útil.")
-]
-
-resposta = chat.invoke([
-    *mensagens,
-    HumanMessage(content="Qual é a capital do Brasil?")
-])
-
-print(resposta.content)
+```bash
+streamlit run app.py --server.port 8502
 ```
 
-## 🤝 Contribuições
+## Observação importante
 
-Contribuições são bem-vindas! Sinta-se livre para:
-- Reportar bugs
-- Sugerir novas funcionalidades
-- Enviar pull requests
-- Melhorar a documentação
+O README antigo falava de uma interface de terminal que não existe no estado atual do repositório. A implementação real do projeto está centralizada na interface web do Streamlit, e o fluxo principal de IA é baseado em:
 
-## 📄 Licença
+- LLM para respostas conversacionais;
+- visão para imagens e OCR;
+- embeddings/RAG para documentos locais;
+- busca web para contexto externo.
 
-Este projeto é de código aberto. Verifique o arquivo LICENSE para mais detalhes.
+## Objetivo do projeto
 
-## 🔗 Links Úteis
+O projeto foi construído como um protótipo de chatbot multimodal para:
 
-- [Groq API Docs](https://console.groq.com/docs)
-- [LangChain Docs](https://python.langchain.com/)
-- [Streamlit Docs](https://docs.streamlit.io/)
-- [FAISS Docs](https://faiss.ai/)
+- responder a perguntas gerais;
+- trabalhar com documentos locais;
+- interpretar imagens;
+- processar PDFs digitalizados;
+- buscar informação atual na web.
 
-## 📞 Suporte
-
-Caso tenha dúvidas ou problemas, abra uma issue no repositório.
+Este é um projeto funcional como demonstração de integração de IA com LangChain, Groq, Streamlit e recuperação de contexto.
 
 ---
 
-**Desenvolvido com ❤️ usando Python, LangChain e Groq**
+Desenvolvido para explorar IA multimodal, RAG e assistentes conversacionais em Python.

@@ -101,7 +101,7 @@ with st.sidebar:
                         # Chama o Qwen para transcrever a página
                         resp_ocr = vision_client.chat.completions.create(
                             model="qwen/qwen3.6-27b",
-                            temperature=0.3,
+                            temperature=0.5,
                             messages=[
                                 {
                                     "role": "system",
@@ -204,7 +204,7 @@ if entrada:
                 if imagem_base64:
                     resposta_vision = vision_client.chat.completions.create(
                         model="qwen/qwen3.6-27b",
-                        temperature=0.3,
+                        temperature=0.5,
                         messages=[
                             {
                                 "role": "system",
